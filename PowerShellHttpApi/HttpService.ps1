@@ -60,14 +60,22 @@ function Start-HttpListener {
 			}
 			$bodyData = $ms.ToArray()
 			$ms.Dispose()
+
+			$bodyString = $null
+			if ($bodyData) {
+				$bodyString = [System.Text.Encoding]::UTF8.GetString($bodyData)
+			}
 			
 			$path = $context.Request.Url.AbsolutePath
+            if ($path.indexof('?') -gt 0) {
+                $path = $path.substring(0, $path.indexof('?'))
+            }
 
 			$handled = $false
 			
 			$handler = $script:handlers[$path]
 			if ($handler) {
-				$responseBody = & $handler $context.Request
+				$responseBody = & $handler -method $context.Request.HttpMethod -headers $context.Request.Headers -body $bodyString -query $context.Request.QueryString
 				if ($responseBody -ne $null) {
 					if ($responseBody -is [System.Net.HttpStatusCode]) {
 						$context.Response.StatusCode = [int]($responseBody)
@@ -81,7 +89,11 @@ function Start-HttpListener {
 						$context.Response.OutputStream.Flush()
 						$context.Response.OutputStream.Close()
 						
-						$context.Response.StatusCode = [int]([System.Net.HttpStatusCode]::Ok)
+                        if ($context.Request.HttpMethod -eq 'POST') {
+                            $context.Response.StatusCode = [int]([System.Net.HttpStatusCode]::Created)
+                        } else {
+                            $context.Response.StatusCode = [int]([System.Net.HttpStatusCode]::Ok)
+                        }
 					}
 				}
 			}
@@ -103,11 +115,59 @@ function Start-HttpListener {
 }
 
 Register-Handler -path '/api/v1/about' -handler {
-	param($httpRequest)
+	param($method, $headers, $body, $query)
+	switch ($method) {
+		'GET' {
+			return [PSCustomObject]@{
+				'About' = 'This is an example PS Http Service'
+			}
+		}
+		Default {
+			return [System.Net.HttpStatusCode]::NotFound
+		}
+	}
+}
+
+$script:copilotMessageIds = @{}
+
+Register-Handler -path '/api/v1/copilotcontext' -handler {
+	param($method, $headers, $body, $query)
 	
-	return [PSCustomObject]@{
-		'About' = 'This is an example PS Http Service'
-	}	
+	switch ($method) {
+		'GET' {
+			$messageId = $query['cpContextMessageId']
+			Write-Host "Search for message $messageId"
+			Write-Host "Message found: $($script:copilotMessageIds.ContainsKey($messageId))"
+			if ($messageId -and $script:copilotMessageIds.ContainsKey($messageId)) {
+				return $script:copilotMessageIds[$messageId]
+			}
+			return [System.Net.HttpStatusCode]::NotFound
+		}
+		'POST' {
+			$messageId = [guid]::NewGuid().Guid
+			if (!$body) {
+				return  [System.Net.HttpStatusCode]::BadRequest
+			}
+			$script:copilotMessageIds[$messageId] = $body | ConvertFrom-Json
+			Write-Host "Message $messageId created: $($script:copilotMessageIds[$messageId])"			
+			return [PSCustomObject]@{
+				'MessageId' = $messageId
+				'CopilotContext' = $script:copilotMessageIds[$messageId]
+			}
+		}
+		'DELETE' {
+			$messageId = $query['cpContextMessageId']
+			if ($messageId) {
+				$script:copilotMessageIds.Remove($messageId)
+				return [System.Net.HttpStatusCode]::Ok
+			} else {
+				return [System.Net.HttpStatusCode]::MethodNotAllowed
+			}
+		}
+		Default {
+			return [System.Net.HttpStatusCode]::NotFound
+		}
+	}    
 }
 
 Start-HttpListener -Url $ServerUrl
