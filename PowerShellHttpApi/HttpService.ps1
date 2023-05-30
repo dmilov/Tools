@@ -81,7 +81,8 @@ function Start-HttpListener {
 						$context.Response.StatusCode = [int]($responseBody)
 					} elseif ($responseBody -is [PSCustomObject]) {
 						$context.Response.Headers = New-Object 'System.Net.WebHeaderCollection'
-						$context.Response.Headers.Add('Content-Type', 'application/json')
+						$context.Response.Headers.Add('Content-Type', 'application/json')						
+						$context.Response.Headers.Add('Access-Control-Allow-Origin', '*')
 
 						$body =  [system.Text.Encoding]::UTF8.GetBytes(($responseBody | ConvertTo-Json -Depth 10))
 						$context.Response.ContentLength64 = $body.Length
