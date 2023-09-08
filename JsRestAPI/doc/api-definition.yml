@@ -1,0 +1,32 @@
+openapi: 3.0.0
+info:
+  title: Word Copilot Extensibility Demo API
+  version: 1.0.0
+servers:  
+  - url: https://rod-copilot-extensibility.azurewebsites.net/api
+paths:
+  /shoes:
+    parameters: []
+    get:
+      summary: Returns list of running shoes brands
+      operationId: getShoes
+      responses:
+        '200':
+          description: List of running shoes brands
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shoes'
+components:
+  schemas:
+    Shoes:      
+      type: object
+      properties:       
+        brand:
+          type: string
+          description: The running shoes brand name
+        model:
+          type: string
+          description: The running shoes model
