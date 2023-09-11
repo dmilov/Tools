@@ -6,9 +6,15 @@ servers:
   - url: https://rod-copilot-extensibility.azurewebsites.net/api
 paths:
   /shoes:
-    parameters: []
     get:
       summary: Returns list of running shoes brands
+      parameters:
+        - in: query
+          name: query
+          required: false
+          schema:
+            type: string
+          description: Query string to search for shoes brand name or model name
       operationId: getShoes
       responses:
         '200':
@@ -19,14 +25,129 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Shoes'
+    post:
+      summary: Creates shoes record with brand and model name
+      requestBody:
+        description: Running shoes brand and model
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Shoes'
+      operationId: createShoes
+      responses:
+        '200':
+          description: List of running shoes brands
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shoes'
+        '400':
+          description: Bad request body doesn't match Shoes object schema
+          content:
+            application/json:
+              schema:
+                $ref:  '#/components/schemas/Error'
+  /shoes/{id}:
+    get:
+      summary: Get a shoes record by ID
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: String ID of the shoes record to get
+      operationId: getShoesByID
+      responses:
+        '200':
+          description: Gets running shoes record by ID
+          content:
+            application/json:
+              schema:
+                $ref:  '#/components/schemas/Shoes'
+        '404':
+          description: Shoes record not found
+          content:
+            application/json:
+              schema:
+                $ref:  '#/components/schemas/Error'
+    put:
+      summary: Updates shoes brand or model
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: String ID of the shoes record to get
+      operationId: updateShoes
+      requestBody:
+        description: Running shoes brand and model
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Shoes'
+      responses:
+        '200':
+          description: Updated running shoes record
+          content:
+            application/json:
+              schema:
+                $ref:  '#/components/schemas/Shoes'
+        '400':
+          description: Bad request body doesn't match Shoes object schema
+          content:
+            application/json:
+              schema:
+                $ref:  '#/components/schemas/Error'
+        '404':
+          description: Shoes record not found
+          content:
+            application/json:
+              schema:
+                $ref:  '#/components/schemas/Error'
+    delete:
+      summary: Removes shoes record
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: String ID of the shoes record to get
+      operationId: dleteShoes
+      responses:
+        '204':
+          description: Shoes record deleted
+        '404':
+          description: Shoes record not found
+          content:
+            application/json:
+              schema:
+                $ref:  '#/components/schemas/Error'
 components:
   schemas:
-    Shoes:      
+    Shoes:
       type: object
-      properties:       
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the running shoes record
         brand:
           type: string
           description: The running shoes brand name
         model:
           type: string
           description: The running shoes model
+      required:
+        - brand
+        - model
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
